@@ -6,14 +6,49 @@ export enum OrderType {
   PURCHASE = 2  // 采购订单
 }
 
-// 订单状态枚举
+// 订单状态枚举（新）
 export enum OrderStatus {
-  DRAFT = 0,        // 草稿
-  PENDING = 10,     // 待确认
-  CONFIRMED = 20,   // 已确认
-  PROCESSING = 30,  // 处理中
-  COMPLETED = 40,   // 已完成
-  CANCELLED = 50    // 已取消
+  PENDING_REVIEW = 0,   // 待审核
+  PENDING_COST = 10,    // 待填充成本
+  COMPLETED = 20,       // 已完成
+  CANCELLED = 50        // 已取消
+}
+
+// 订单状态标签
+export const OrderStatusLabels = {
+  [OrderStatus.PENDING_REVIEW]: '待审核',
+  [OrderStatus.PENDING_COST]: '待填充成本',
+  [OrderStatus.COMPLETED]: '已完成',
+  [OrderStatus.CANCELLED]: '已取消'
+}
+
+// 订单明细 VO
+export interface OrderItemVO {
+  id?: number
+  orderId?: number
+  // 销售信息（业务员填写）
+  productName: string
+  spec?: string
+  saleUnit?: string
+  saleQuantity: number
+  salePrice: number
+  saleAmount?: number
+  saleRemark?: string
+  // 采购成本信息（管理员填写）
+  purchaseUnit?: string
+  purchaseQuantity?: number
+  purchasePrice?: number
+  purchaseAmount?: number
+  purchaseRemark?: string
+  supplierId?: number
+  supplierName?: string
+  // 利润信息
+  grossProfit?: number
+  taxAmount?: number
+  netProfit?: number
+  // 付款信息
+  paymentDate?: string
+  isPaid?: boolean
 }
 
 // ERP 订单 VO
@@ -26,18 +61,51 @@ export interface OrderVO {
   supplierName?: string
   orderType: number
   status?: number
-  orderDate?: Date
-  deliveryDate?: Date
+  orderDate?: Date | string
+  deliveryDate?: Date | string
   totalQuantity?: number
   totalAmount?: number
   discountAmount?: number
   payableAmount?: number
   paidAmount?: number
+  shippingFee?: number
+  // 成本信息
+  totalPurchaseAmount?: number
+  totalGrossProfit?: number
+  totalTaxAmount?: number
+  totalNetProfit?: number
+  costFilled?: boolean
+  costFilledBy?: number
+  costFilledByName?: string
+  costFilledTime?: Date
+  // 业务员信息
+  salesmanId?: number
+  salesmanName?: string
+  // 其他
   contact?: string
   mobile?: string
   address?: string
   remark?: string
   createTime?: Date
+  // 明细列表
+  items?: OrderItemVO[]
+}
+
+// 成本填充请求
+export interface OrderCostFillReqVO {
+  orderId: number
+  items: {
+    itemId: number
+    purchaseUnit?: string
+    purchaseQuantity?: number
+    purchasePrice?: number
+    purchaseAmount?: number
+    purchaseRemark?: string
+    supplierId?: number
+    taxAmount?: number
+    paymentDate?: string
+    isPaid?: boolean
+  }[]
 }
 
 // ERP 订单 API
@@ -47,7 +115,7 @@ export const OrderApi = {
     return await request.get({ url: `/erp/order/page`, params })
   },
 
-  // 查询订单详情
+  // 查询订单详情（含明细）
   getOrder: async (id: number) => {
     return await request.get({ url: `/erp/order/get?id=` + id })
   },
@@ -85,5 +153,36 @@ export const OrderApi = {
   // 根据供应商获取采购订单精简列表
   getOrderSimpleListBySupplierId: async (supplierId: number) => {
     return await request.get({ url: `/erp/order/simple-list-by-supplier?supplierId=` + supplierId })
+  },
+
+  // 审核通过订单
+  approveOrder: async (id: number) => {
+    return await request.put({ url: `/erp/order/approve?id=` + id })
+  },
+
+  // 审核拒绝订单
+  rejectOrder: async (id: number, reason?: string) => {
+    const params = reason ? `?id=${id}&reason=${encodeURIComponent(reason)}` : `?id=${id}`
+    return await request.put({ url: `/erp/order/reject` + params })
+  },
+
+  // 填充订单成本
+  fillOrderCost: async (data: OrderCostFillReqVO) => {
+    return await request.put({ url: `/erp/order/fill-cost`, data })
+  },
+
+  // 编辑订单成本
+  editOrderCost: async (data: OrderCostFillReqVO) => {
+    return await request.put({ url: `/erp/order/edit-cost`, data })
+  },
+
+  // 打印导出订单数据（客户联开单）
+  printExport: async (id: number) => {
+    return await request.download({ url: `/erp/order/print-export?id=${id}` })
+  },
+
+  // 标注订单为已付款
+  markOrderAsPaid: async (id: number) => {
+    return await request.put({ url: `/erp/order/mark-paid?id=${id}` })
   }
 }

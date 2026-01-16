@@ -66,7 +66,9 @@ watch(
       ]"
       to="/"
     >
+      <!-- 暂时屏蔽logo图标 -->
       <img
+        v-if="false"
         class="h-[calc(var(--logo-height)-10px)] w-[calc(var(--logo-height)-10px)]"
         src="@/assets/imgs/logo.png"
       />

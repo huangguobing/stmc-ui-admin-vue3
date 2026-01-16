@@ -17,17 +17,6 @@
           class="!w-240px"
         />
       </el-form-item>
-      <el-form-item label="付款类型" prop="paymentType">
-        <el-select
-          v-model="queryParams.paymentType"
-          placeholder="请选择付款类型"
-          clearable
-          class="!w-240px"
-        >
-          <el-option label="采购付款" :value="1" />
-          <el-option label="费用付款" :value="2" />
-        </el-select>
-      </el-form-item>
       <el-form-item label="付款状态" prop="status">
         <el-select
           v-model="queryParams.status"
@@ -35,11 +24,10 @@
           clearable
           class="!w-240px"
         >
-          <el-option label="待审批" :value="0" />
-          <el-option label="已通过" :value="10" />
-          <el-option label="已付款" :value="20" />
-          <el-option label="已拒绝" :value="30" />
-          <el-option label="已取消" :value="40" />
+          <el-option label="待付款" :value="0" />
+          <el-option label="部分付款" :value="10" />
+          <el-option label="已完成" :value="20" />
+          <el-option label="已取消" :value="30" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -59,16 +47,7 @@
   <ContentWrap>
     <el-table v-loading="loading" :data="list">
       <el-table-column label="编号" align="center" prop="id" width="80" />
-      <el-table-column label="付款单号" align="center" prop="paymentNo" width="150" />
-      <el-table-column label="供应商" align="center" prop="supplierName" width="150" :show-overflow-tooltip="true" />
-      <el-table-column label="关联订单" align="center" prop="orderNo" width="150" />
-      <el-table-column label="付款类型" align="center" prop="paymentType" width="100">
-        <template #default="scope">
-          <el-tag :type="scope.row.paymentType === 1 ? 'primary' : 'warning'">
-            {{ scope.row.paymentType === 1 ? '采购付款' : '费用付款' }}
-          </el-tag>
-        </template>
-      </el-table-column>
+      <el-table-column label="供应商" align="center" prop="supplierName" min-width="150" :show-overflow-tooltip="true" />
       <el-table-column label="付款状态" align="center" prop="status" width="100">
         <template #default="scope">
           <el-tag :type="getStatusType(scope.row.status)">
@@ -76,7 +55,12 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="付款金额" align="right" prop="amount" width="120" />
+      <el-table-column label="期数" align="center" prop="totalStages" width="80" />
+      <el-table-column label="计划金额" align="right" prop="amount" width="120">
+        <template #default="scope">
+          {{ formatNumber(scope.row.amount) }}
+        </template>
+      </el-table-column>
       <el-table-column label="付款方式" align="center" prop="paymentMethod" width="100">
         <template #default="scope">
           {{ getPaymentMethodLabel(scope.row.paymentMethod) }}
@@ -91,7 +75,7 @@
         :formatter="dateFormatter"
         width="180"
       />
-      <el-table-column label="操作" align="center" width="200" fixed="right">
+      <el-table-column label="操作" align="center" width="120" fixed="right">
         <template #default="scope">
           <el-button
             type="primary"
@@ -103,29 +87,11 @@
             修改
           </el-button>
           <el-button
-            type="success"
-            link
-            @click="handleApprove(scope.row.id, true)"
-            v-hasPermi="['erp:payment:approve']"
-            v-if="scope.row.status === 0"
-          >
-            通过
-          </el-button>
-          <el-button
-            type="warning"
-            link
-            @click="handleApprove(scope.row.id, false)"
-            v-hasPermi="['erp:payment:approve']"
-            v-if="scope.row.status === 0"
-          >
-            拒绝
-          </el-button>
-          <el-button
             type="danger"
             link
             @click="handleDelete(scope.row.id)"
             v-hasPermi="['erp:payment:delete']"
-            v-if="scope.row.status === 0 || scope.row.status === 30"
+            v-if="scope.row.status === 0"
           >
             删除
           </el-button>
@@ -146,6 +112,7 @@
 
 <script lang="ts" setup>
 import { dateFormatter } from '@/utils/formatTime'
+import { formatNumber } from '@/utils'
 import { PaymentApi, PaymentVO } from '@/api/erp/payment'
 import PaymentForm from './PaymentForm.vue'
 
@@ -161,7 +128,6 @@ const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
   paymentNo: undefined,
-  paymentType: undefined,
   status: undefined
 })
 const queryFormRef = ref()
@@ -169,11 +135,10 @@ const queryFormRef = ref()
 /** 获取状态类型 */
 const getStatusType = (status: number) => {
   switch (status) {
-    case 0: return 'warning'
-    case 10: return 'success'
-    case 20: return 'success'
-    case 30: return 'danger'
-    case 40: return 'info'
+    case 0: return 'warning'   // 待付款
+    case 10: return 'primary'  // 部分付款
+    case 20: return 'success'  // 已完成
+    case 30: return 'info'     // 已取消
     default: return 'info'
   }
 }
@@ -181,11 +146,10 @@ const getStatusType = (status: number) => {
 /** 获取状态标签 */
 const getStatusLabel = (status: number) => {
   switch (status) {
-    case 0: return '待审批'
-    case 10: return '已通过'
-    case 20: return '已付款'
-    case 30: return '已拒绝'
-    case 40: return '已取消'
+    case 0: return '待付款'
+    case 10: return '部分付款'
+    case 20: return '已完成'
+    case 30: return '已取消'
     default: return '未知'
   }
 }
@@ -228,17 +192,6 @@ const resetQuery = () => {
 const formRef = ref()
 const openForm = (type: string, id?: number) => {
   formRef.value.open(type, id)
-}
-
-/** 审批操作 */
-const handleApprove = async (id: number, approved: boolean) => {
-  try {
-    const action = approved ? '通过' : '拒绝'
-    await message.confirm(`确认${action}该付款申请吗？`)
-    await PaymentApi.approvePayment(id, approved)
-    message.success(`${action}成功`)
-    await getList()
-  } catch {}
 }
 
 /** 删除按钮操作 */

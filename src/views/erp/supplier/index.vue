@@ -6,32 +6,32 @@
       :model="queryParams"
       ref="queryFormRef"
       :inline="true"
-      label-width="68px"
+      label-width="85px"
     >
       <el-form-item label="供应商名称" prop="name">
         <el-input
           v-model="queryParams.name"
-          placeholder="请输入供应商名称"
+          placeholder="请输入名称"
           clearable
           @keyup.enter="handleQuery"
-          class="!w-240px"
+          class="!w-200px"
         />
       </el-form-item>
-      <el-form-item label="联系人" prop="contact">
+      <el-form-item label="联系人" prop="contact" label-width="60px">
         <el-input
           v-model="queryParams.contact"
-          placeholder="请输入联系人"
+          placeholder="请输入"
           clearable
           @keyup.enter="handleQuery"
-          class="!w-240px"
+          class="!w-150px"
         />
       </el-form-item>
-      <el-form-item label="状态" prop="status">
+      <el-form-item label="状态" prop="status" label-width="50px">
         <el-select
           v-model="queryParams.status"
-          placeholder="请选择状态"
+          placeholder="全部"
           clearable
-          class="!w-240px"
+          class="!w-100px"
         >
           <el-option
             v-for="dict in getIntDictOptions(DICT_TYPE.COMMON_STATUS)"
@@ -54,16 +54,19 @@
         </el-button>
       </el-form-item>
     </el-form>
-  </ContentWrap>
-  <ContentWrap>
-    <el-table v-loading="loading" :data="list">
+
+    <!-- 列表 -->
+    <el-table v-loading="loading" :data="list" class="mt-15px">
       <el-table-column label="编号" align="center" prop="id" width="80" />
       <el-table-column label="供应商编码" align="center" prop="code" width="120" />
       <el-table-column label="供应商名称" align="center" prop="name" min-width="150" />
       <el-table-column label="联系人" align="center" prop="contact" width="100" />
       <el-table-column label="联系电话" align="center" prop="mobile" width="120" />
       <el-table-column label="地址" align="center" prop="address" min-width="200" :show-overflow-tooltip="true" />
+      <!-- 【暂时屏蔽】账期相关列 - 后期可能恢复
       <el-table-column label="账期(天)" align="center" prop="paymentDays" width="100" />
+      <el-table-column label="分期付款" align="center" prop="paymentTermSummary" min-width="180" :show-overflow-tooltip="true" />
+      -->
       <el-table-column label="状态" align="center" prop="status" width="80">
         <template #default="scope">
           <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />

@@ -149,6 +149,10 @@ import { OrderApi, OrderVO } from '@/api/erp/order'
 import { CustomerApi } from '@/api/erp/customer'
 import { SupplierApi } from '@/api/erp/supplier'
 import { FormRules } from 'element-plus'
+import { formatDate } from '@/utils/formatTime'
+
+// 获取当前日期字符串
+const getCurrentDate = () => formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
 
 defineOptions({ name: 'ErpOrderForm' })
 
@@ -163,8 +167,8 @@ const formData = ref<OrderVO>({
   orderType: 1,
   customerId: undefined,
   supplierId: undefined,
-  orderDate: undefined,
-  deliveryDate: undefined,
+  orderDate: getCurrentDate(),
+  deliveryDate: getCurrentDate(),
   totalQuantity: 0,
   totalAmount: 0,
   discountAmount: 0,
@@ -247,8 +251,8 @@ const resetForm = () => {
     orderType: 1,
     customerId: undefined,
     supplierId: undefined,
-    orderDate: undefined,
-    deliveryDate: undefined,
+    orderDate: getCurrentDate(),
+    deliveryDate: getCurrentDate(),
     totalQuantity: 0,
     totalAmount: 0,
     discountAmount: 0,

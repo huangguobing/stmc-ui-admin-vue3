@@ -313,42 +313,34 @@ export const getSumValue = (values: number[]): number => {
 // ========== 通用金额方法 ==========
 
 /**
- * 将一个整数转换为分数保留两位小数
+ * 将一个整数转换为分数，智能显示小数（无小数时不显示.00）
  * @param num
  */
 export const formatToFraction = (num: number | string | undefined): string => {
-  if (typeof num === 'undefined') return '0.00'
+  if (typeof num === 'undefined' || num === null) return '0'
   const parsedNumber = typeof num === 'string' ? parseFloat(num) : num
-  return (parsedNumber / 100.0).toFixed(2)
+  const result = parsedNumber / 100.0
+  // 如果是整数则不显示小数
+  if (Number.isInteger(result)) {
+    return result.toString()
+  }
+  // 有小数则保留实际小数位（最多2位）
+  return parseFloat(result.toFixed(2)).toString()
 }
 
 /**
- * 将一个数转换为 1.00 这样
+ * 将一个数转换为字符串，智能显示小数（无小数时不显示.00）
  * 数据呈现的时候使用
  *
  * @param num 整数
  */
 // TODO @芋艿：看看怎么融合掉
 export const floatToFixed2 = (num: number | string | undefined): string => {
-  let str = '0.00'
-  if (typeof num === 'undefined') {
-    return str
+  if (typeof num === 'undefined' || num === null) {
+    return '0'
   }
   const f = formatToFraction(num)
-  const decimalPart = f.toString().split('.')[1]
-  const len = decimalPart ? decimalPart.length : 0
-  switch (len) {
-    case 0:
-      str = f.toString() + '.00'
-      break
-    case 1:
-      str = f.toString() + '0'
-      break
-    case 2:
-      str = f.toString()
-      break
-  }
-  return str
+  return f
 }
 
 /**
@@ -390,18 +382,32 @@ export const calculateRelativeRate = (value?: number, reference?: number) => {
   return ((100 * ((value || 0) - reference)) / reference).toFixed(0)
 }
 
+/**
+ * 智能格式化数字，无小数时不显示.00
+ * @param num 数字
+ * @param digit 最大小数位数，默认2
+ * @return 格式化后的字符串
+ */
+export const formatNumber = (num: number | string | undefined | null, digit: number = 2): string => {
+  if (num == null || num === '') return '0'
+  const n = typeof num === 'string' ? parseFloat(num) : num
+  if (isNaN(n)) return '0'
+  if (Number.isInteger(n)) return n.toString()
+  return parseFloat(n.toFixed(digit)).toString()
+}
+
 // ========== ERP 专属方法 ==========
 
 const ERP_COUNT_DIGIT = 3
 const ERP_PRICE_DIGIT = 2
 
 /**
- * 【ERP】格式化 Input 数字
+ * 【ERP】格式化 Input 数字，智能显示小数
  *
  * 例如说：库存数量
  *
  * @param num 数量
- * @package digit 保留的小数位数
+ * @package digit 保留的小数位数（仅在有小数时生效）
  * @return 格式化后的数量
  */
 export const erpNumberFormatter = (num: number | string | undefined, digit: number) => {
@@ -415,7 +421,12 @@ export const erpNumberFormatter = (num: number | string | undefined, digit: numb
   if (isNaN(num)) {
     return ''
   }
-  return num.toFixed(digit)
+  // 如果是整数则不显示小数
+  if (Number.isInteger(num)) {
+    return num.toString()
+  }
+  // 有小数则保留指定位数，并去掉末尾的0
+  return parseFloat(num.toFixed(digit)).toString()
 }
 
 /**
@@ -479,7 +490,7 @@ export const erpPriceMultiply = (price: number, count: number) => {
 }
 
 /**
- * 【ERP】百分比计算，四舍五入保留两位小数
+ * 【ERP】百分比计算，智能显示小数
  *
  * 如果 total 为 0，则返回 0
  *
@@ -487,8 +498,12 @@ export const erpPriceMultiply = (price: number, count: number) => {
  * @param total 总值
  */
 export const erpCalculatePercentage = (value: number, total: number) => {
-  if (total === 0) return 0
-  return ((value / total) * 100).toFixed(2)
+  if (total === 0) return '0'
+  const result = (value / total) * 100
+  if (Number.isInteger(result)) {
+    return result.toString()
+  }
+  return parseFloat(result.toFixed(2)).toString()
 }
 
 /**

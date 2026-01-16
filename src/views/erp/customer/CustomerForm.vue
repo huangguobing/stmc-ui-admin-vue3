@@ -68,20 +68,9 @@
             <el-input v-model="formData.taxNo" placeholder="请输入税号" />
           </el-form-item>
         </el-col>
-        <el-col :span="12">
-          <el-form-item label="信用额度" prop="creditLimit">
-            <el-input-number
-              v-model="formData.creditLimit"
-              :min="0"
-              :precision="2"
-              placeholder="请输入信用额度"
-              class="!w-1/1"
-            />
-          </el-form-item>
-        </el-col>
       </el-row>
       <el-row>
-        <el-col :span="12">
+        <el-col :span="24">
           <el-form-item label="状态" prop="status">
             <el-radio-group v-model="formData.status">
               <el-radio
@@ -92,11 +81,6 @@
                 {{ dict.label }}
               </el-radio>
             </el-radio-group>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="排序" prop="sort">
-            <el-input-number v-model="formData.sort" :min="0" placeholder="请输入排序" />
           </el-form-item>
         </el-col>
       </el-row>

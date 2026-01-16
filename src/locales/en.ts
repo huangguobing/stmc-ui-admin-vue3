@@ -113,8 +113,9 @@ export default {
     small: 'Small'
   },
   login: {
-    welcome: 'Welcome to the system',
-    message: 'Backstage management system',
+    welcome: 'STMC Management System',
+    message: 'Professional Enterprise Resource Management Platform',
+    slogan: 'Smart Management, Efficient Operations',
     tenantname: 'TenantName',
     username: 'Username',
     password: 'Password',

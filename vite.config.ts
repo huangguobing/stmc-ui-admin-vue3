@@ -79,6 +79,11 @@ export default ({command, mode}: ConfigEnv): UserConfig => {
                       echarts: ['echarts'], // 将 echarts 单独打包，参考 https://gitee.com/yudaocode/yudao-ui-admin-vue3/issues/IAB1SX 讨论
                       'form-create': ['@form-create/element-ui'], // 参考 https://github.com/yudaocode/yudao-ui-admin-vue3/issues/148 讨论
                       'form-designer': ['@form-create/designer'],
+                      // 以下为性能优化新增的代码分割
+                      'bpmn': ['bpmn-js', 'diagram-js'], // 工作流设计器
+                      'wangeditor': ['@wangeditor-next/editor', '@wangeditor-next/editor-for-vue'], // 富文本编辑器
+                      'video': ['video.js'], // 视频播放器
+                      'markmap': ['markmap-lib', 'markmap-view', 'markmap-toolbar'], // 思维导图
                     }
                 },
             },

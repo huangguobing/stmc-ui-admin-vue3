@@ -69,10 +69,10 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="岗位">
-            <el-select v-model="formData.postIds" multiple placeholder="请选择">
+          <el-form-item label="角色" prop="roleIds">
+            <el-select v-model="formData.roleIds" multiple placeholder="请选择角色">
               <el-option
-                v-for="item in postList"
+                v-for="item in roleList"
                 :key="item.id"
                 :label="item.name"
                 :value="item.id!"
@@ -99,7 +99,8 @@
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { CommonStatusEnum } from '@/utils/constants'
 import { defaultProps, handleTree } from '@/utils/tree'
-import * as PostApi from '@/api/system/post'
+import * as RoleApi from '@/api/system/role'
+import * as PermissionApi from '@/api/system/permission'
 import * as DeptApi from '@/api/system/dept'
 import * as UserApi from '@/api/system/user'
 import { FormRules } from 'element-plus'
@@ -148,7 +149,7 @@ const formRules = reactive<FormRules>({
 })
 const formRef = ref() // 表单 Ref
 const deptList = ref<Tree[]>([]) // 树形结构
-const postList = ref([] as PostApi.PostVO[]) // 岗位列表
+const roleList = ref([] as RoleApi.RoleVO[]) // 角色列表
 
 /** 打开弹窗 */
 const open = async (type: string, id?: number) => {
@@ -156,19 +157,21 @@ const open = async (type: string, id?: number) => {
   dialogTitle.value = t('action.' + type)
   formType.value = type
   resetForm()
+  // 加载部门树
+  deptList.value = handleTree(await DeptApi.getSimpleDeptList())
+  // 加载角色列表
+  roleList.value = await RoleApi.getSimpleRoleList()
   // 修改时，设置数据
   if (id) {
     formLoading.value = true
     try {
       formData.value = await UserApi.getUser(id)
+      // 获取用户已有角色
+      formData.value.roleIds = await PermissionApi.getUserRoleList(id)
     } finally {
       formLoading.value = false
     }
   }
-  // 加载部门树
-  deptList.value = handleTree(await DeptApi.getSimpleDeptList())
-  // 加载岗位列表
-  postList.value = await PostApi.getSimplePostList()
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 

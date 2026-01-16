@@ -30,6 +30,8 @@ export interface PaymentVO {
   supplierName?: string      // 供应商名称
   orderId?: number
   orderNo?: string           // 关联订单号
+  customerName?: string      // 客户名称（从订单获取）
+  salesmanName?: string      // 开单业务员（从订单获取）
   paymentType: number
   status?: number
   amount: number

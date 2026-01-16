@@ -63,7 +63,6 @@
       <el-table-column label="联系人" align="center" prop="contact" width="100" />
       <el-table-column label="联系电话" align="center" prop="mobile" width="120" />
       <el-table-column label="地址" align="center" prop="address" min-width="200" :show-overflow-tooltip="true" />
-      <el-table-column label="信用额度" align="center" prop="creditLimit" width="100" />
       <el-table-column label="状态" align="center" prop="status" width="80">
         <template #default="scope">
           <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />

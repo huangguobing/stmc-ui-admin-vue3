@@ -19,8 +19,6 @@ const list = ref<any[]>([]) // 消息列表
 // 获得消息列表
 const getList = async () => {
   list.value = await NotifyMessageApi.getUnreadNotifyMessageList()
-  // 强制设置 unreadCount 为 0，避免小红点因为轮询太慢，不消除
-  unreadCount.value = 0
 }
 
 // 获得未读消息数
@@ -28,6 +26,17 @@ const getUnreadCount = async () => {
   NotifyMessageApi.getUnreadNotifyMessageCount().then((data) => {
     unreadCount.value = data
   })
+}
+
+// 标记消息为已处理
+const handleMarkRead = async (id: number) => {
+  await NotifyMessageApi.updateNotifyMessageRead([id])
+  // 从列表中移除该消息
+  list.value = list.value.filter(item => item.id !== id)
+  // 更新未读数量
+  if (unreadCount.value > 0) {
+    unreadCount.value--
+  }
 }
 
 // 跳转我的站内信
@@ -58,24 +67,40 @@ onMounted(() => {
   <div class="message">
     <ElPopover :width="400" placement="bottom" trigger="click">
       <template #reference>
-        <ElBadge :is-dot="unreadCount > 0" class="item">
+        <ElBadge
+          :value="unreadCount"
+          :hidden="unreadCount === 0"
+          :max="99"
+          class="item"
+          :class="{ 'badge-blink': unreadCount > 0 }"
+        >
           <Icon :size="18" class="cursor-pointer" icon="ep:bell" :color="color" @click="getList" />
         </ElBadge>
       </template>
       <ElTabs v-model="activeName">
         <ElTabPane label="我的站内信" name="notice">
           <el-scrollbar class="message-list">
-            <template v-for="item in list" :key="item.id">
-              <div class="message-item">
-                <img alt="" class="message-icon" src="@/assets/imgs/avatar.gif" />
-                <div class="message-content">
-                  <span class="message-title">
-                    {{ item.templateNickname }}：{{ item.templateContent }}
-                  </span>
-                  <span class="message-date">
-                    {{ formatDate(item.createTime) }}
-                  </span>
+            <template v-if="list.length > 0">
+              <template v-for="item in list" :key="item.id">
+                <div class="message-item">
+                  <div class="message-content">
+                    <span class="message-title">
+                      {{ item.templateNickname }}：{{ item.templateContent }}
+                    </span>
+                    <span class="message-date">
+                      {{ formatDate(item.createTime) }}
+                    </span>
+                  </div>
+                  <el-button type="success" size="small" link @click.stop="handleMarkRead(item.id)">
+                    已处理
+                  </el-button>
                 </div>
+              </template>
+            </template>
+            <template v-else>
+              <div class="message-empty">
+                <Icon icon="ep:message" :size="48" class="text-gray-300" />
+                <span class="text-gray-400">暂无未处理消息</span>
               </div>
             </template>
           </el-scrollbar>
@@ -89,6 +114,18 @@ onMounted(() => {
   </div>
 </template>
 <style lang="scss" scoped>
+// 闪烁动画
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.badge-blink {
+  :deep(.el-badge__content) {
+    animation: blink 1s infinite;
+  }
+}
+
 .message-empty {
   display: flex;
   flex-direction: column;
@@ -113,14 +150,9 @@ onMounted(() => {
       border: none;
     }
 
-    .message-icon {
-      width: 40px;
-      height: 40px;
-      margin: 0 20px 0 5px;
-    }
-
     .message-content {
       display: flex;
+      flex: 1;
       flex-direction: column;
 
       .message-title {

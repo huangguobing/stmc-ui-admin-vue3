@@ -199,7 +199,7 @@ const loginData = reactive({
   captchaEnable: import.meta.env.VITE_APP_CAPTCHA_ENABLE !== 'false',
   tenantEnable: import.meta.env.VITE_APP_TENANT_ENABLE !== 'false',
   loginForm: {
-    tenantName: '芋道源码',
+    tenantName: '尚泰铭成',
     username: 'admin',
     password: 'admin123',
     captchaVerification: '',
@@ -223,6 +223,9 @@ const getTenantId = async () => {
   if (loginData.tenantEnable) {
     const res = await LoginApi.getTenantIdByName(loginData.loginForm.tenantName)
     authUtil.setTenantId(res)
+  } else {
+    // 禁用多租户时，默认使用租户ID=1
+    authUtil.setTenantId(1)
   }
 }
 // 记住我

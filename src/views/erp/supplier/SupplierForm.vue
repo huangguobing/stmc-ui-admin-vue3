@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
+  <Dialog v-model="dialogVisible" :title="dialogTitle" width="800px">
     <el-form
       ref="formRef"
       v-loading="formLoading"
@@ -68,19 +68,9 @@
             <el-input v-model="formData.taxNo" placeholder="请输入税号" />
           </el-form-item>
         </el-col>
-        <el-col :span="12">
-          <el-form-item label="账期天数" prop="paymentDays">
-            <el-input-number
-              v-model="formData.paymentDays"
-              :min="0"
-              placeholder="请输入账期天数"
-              class="!w-1/1"
-            />
-          </el-form-item>
-        </el-col>
       </el-row>
       <el-row>
-        <el-col :span="12">
+        <el-col :span="24">
           <el-form-item label="状态" prop="status">
             <el-radio-group v-model="formData.status">
               <el-radio
@@ -93,11 +83,6 @@
             </el-radio-group>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
-          <el-form-item label="排序" prop="sort">
-            <el-input-number v-model="formData.sort" :min="0" placeholder="请输入排序" />
-          </el-form-item>
-        </el-col>
       </el-row>
       <el-row>
         <el-col :span="24">
@@ -106,6 +91,49 @@
           </el-form-item>
         </el-col>
       </el-row>
+
+      <!-- 【暂时屏蔽】账期分期配置 - 后期可能恢复
+      <el-divider content-position="left">账期分期配置</el-divider>
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label-width="0">
+            <el-table :data="paymentTermConfigs" border style="width: 100%">
+              <el-table-column label="期数" align="center" width="80">
+                <template #default="{ $index }">第{{ $index + 1 }}期</template>
+              </el-table-column>
+              <el-table-column label="订单后天数" align="center" width="150">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.daysAfterOrder" :min="0" :max="365" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column label="付款比例(%)" align="center" width="150">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.percentage" :min="0" :max="100" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column label="备注" align="center">
+                <template #default="{ row }">
+                  <el-input v-model="row.remark" placeholder="请输入备注" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" align="center" width="80">
+                <template #default="{ $index }">
+                  <el-button type="danger" link size="small" @click="removePaymentTerm($index)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div class="mt-10px">
+              <el-button type="primary" plain size="small" @click="addPaymentTerm">
+                <Icon icon="ep:plus" class="mr-5px" /> 添加分期
+              </el-button>
+              <span class="ml-10px text-gray-400 text-12px">
+                提示：所有期数的付款比例总和必须等于100% (当前: {{ totalPercentage }}%)
+              </span>
+            </div>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      -->
     </el-form>
     <template #footer>
       <el-button :disabled="formLoading" type="primary" @click="submitForm">确 定</el-button>
@@ -117,6 +145,7 @@
 <script lang="ts" setup>
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { SupplierApi, SupplierVO } from '@/api/erp/supplier'
+import { PaymentTermConfigApi, PaymentTermConfigVO } from '@/api/erp/paymentTermConfig'
 import { FormRules } from 'element-plus'
 
 defineOptions({ name: 'ErpSupplierForm' })
@@ -149,6 +178,28 @@ const formRules = reactive<FormRules>({
 })
 const formRef = ref()
 
+// 账期分期配置
+const paymentTermConfigs = ref<PaymentTermConfigVO[]>([])
+
+// 计算总比例
+const totalPercentage = computed(() => {
+  return paymentTermConfigs.value.reduce((sum, item) => sum + (item.percentage || 0), 0)
+})
+
+// 添加分期
+const addPaymentTerm = () => {
+  paymentTermConfigs.value.push({
+    daysAfterOrder: undefined,
+    percentage: undefined,
+    remark: ''
+  })
+}
+
+// 删除分期
+const removePaymentTerm = (index: number) => {
+  paymentTermConfigs.value.splice(index, 1)
+}
+
 /** 打开弹窗 */
 const open = async (type: string, id?: number) => {
   dialogVisible.value = true
@@ -159,6 +210,9 @@ const open = async (type: string, id?: number) => {
     formLoading.value = true
     try {
       formData.value = await SupplierApi.getSupplier(id)
+      // 加载账期配置
+      const configs = await PaymentTermConfigApi.getConfigList(id)
+      paymentTermConfigs.value = configs || []
     } finally {
       formLoading.value = false
     }
@@ -172,15 +226,33 @@ const submitForm = async () => {
   if (!formRef) return
   const valid = await formRef.value.validate()
   if (!valid) return
+
+  // 校验账期配置比例
+  if (paymentTermConfigs.value.length > 0 && totalPercentage.value !== 100) {
+    message.warning('分期付款比例总和必须等于100%')
+    return
+  }
+
   formLoading.value = true
   try {
+    let supplierId: number
     if (formType.value === 'create') {
-      await SupplierApi.createSupplier(formData.value)
+      supplierId = await SupplierApi.createSupplier(formData.value)
       message.success(t('common.createSuccess'))
     } else {
       await SupplierApi.updateSupplier(formData.value)
+      supplierId = formData.value.id!
       message.success(t('common.updateSuccess'))
     }
+
+    // 保存账期配置
+    if (paymentTermConfigs.value.length > 0) {
+      await PaymentTermConfigApi.saveConfigs(supplierId, paymentTermConfigs.value)
+    } else {
+      // 如果没有配置，清空原有配置
+      await PaymentTermConfigApi.saveConfigs(supplierId, [])
+    }
+
     dialogVisible.value = false
     emit('success')
   } finally {
@@ -206,6 +278,7 @@ const resetForm = () => {
     sort: 0,
     remark: ''
   }
+  paymentTermConfigs.value = []
   formRef.value?.resetFields()
 }
 </script>
