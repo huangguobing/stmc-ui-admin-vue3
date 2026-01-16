@@ -7,3 +7,6 @@ pnpm-debug
 auto-*.d.ts
 .idea
 .history
+
+# Claude Code 临时文件
+tmpclaude-*-cwd
