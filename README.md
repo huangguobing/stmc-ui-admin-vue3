@@ -242,88 +242,10 @@ stmc-ui-admin-vue3/
 
 ---
 
-## 🌐 环境配置
-
-### 开发环境（.env）
-```bash
-# 标题
-VITE_APP_TITLE=尚泰铭成ERP管理系统
-
-# 开发环境（本地）
-VITE_BASE_URL=http://localhost:48080
-
-# 测试环境（187服务器）
-# VITE_BASE_URL=http://192.168.1.187:48080
-```
-
-### 生产环境（.env.prod）
-```bash
-# 标题
-VITE_APP_TITLE=尚泰铭成ERP管理系统
-
-# 生产环境
-VITE_BASE_URL=http://47.109.47.47:48080
-```
-
----
-
-## 📝 开发规范
-
-### 代码规范
-- 使用 ESLint + Prettier 进行代码格式化
-- 使用 TypeScript 进行类型检查
-- 组件命名使用 PascalCase
-- 文件命名使用 camelCase
-
-### Git提交规范
-```
-feat: 新功能
-fix: 修复bug
-docs: 文档更新
-style: 代码格式调整
-refactor: 代码重构
-perf: 性能优化
-test: 测试相关
-chore: 构建/工具链相关
-```
-
----
 
 ## 🐛 已知问题
 
 暂无
-
----
-
-## 📅 更新日志
-
-### v1.2.0 (2026-01-15)
-- 🆕 新增订单成本编辑功能
-- 🆕 新增订单路由（/order/create、/order/edit/:id）
-- 🆕 新增统计报表功能
-- 🐛 修复日期选择器数组格式错误
-- 🎨 优化文案："付款状态" → "收款状态"
-- 🗑️ 删除未使用的AI、BPM、CRM等模块
-- 🗑️ 简化登录流程
-
-### v1.1.0 (2026-01-13)
-- 🆕 客户销售统计功能
-- 🆕 供应商账期配置
-- 🆕 付款计划自动拆分
-
-### v1.0.0 (2026-01-11)
-- 🎉 基于芋道框架完成初始开发
-- ✅ 客户管理模块
-- ✅ 供应商管理模块
-- ✅ 订单管理模块
-- ✅ 付款管理模块
-
----
-
-## 📞 技术支持
-
-- 💬 问题反馈：[GitHub Issues](https://github.com/huangguobing/stmc-ui-admin-vue3/issues)
-- 📧 联系邮箱：support@stmc.com
 
 ---
 
