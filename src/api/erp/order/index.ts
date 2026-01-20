@@ -176,6 +176,11 @@ export const OrderApi = {
     return await request.put({ url: `/erp/order/edit-cost`, data })
   },
 
+  // 编辑订单商品（已完成订单，用于退换货）
+  editOrderItems: async (data: OrderVO) => {
+    return await request.put({ url: `/erp/order/edit-items`, data })
+  },
+
   // 打印导出订单数据（客户联开单）
   printExport: async (id: number) => {
     return await request.download({ url: `/erp/order/print-export?id=${id}` })

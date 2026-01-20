@@ -41,8 +41,8 @@
             </template>
           </el-table-column>
           <el-table-column label="备注" prop="saleRemark" width="100" :show-overflow-tooltip="true" />
-          <!-- 成本信息（管理员可见或已填充） -->
-          <template v-if="orderData.costFilled">
+          <!-- 成本信息（仅管理员可见：需要有fill-cost权限且成本已填充） -->
+          <template v-if="canViewCost && orderData.costFilled">
             <el-table-column label="供应商" prop="supplierName" width="100" />
             <el-table-column label="采购单价" prop="purchasePrice" width="80" align="right" />
             <el-table-column label="采购金额" width="100" align="right">
@@ -76,7 +76,7 @@
           <span class="font-bold">金额汇总</span>
         </template>
         <el-row :gutter="20">
-          <el-col :span="orderData.costFilled ? 12 : 24">
+          <el-col :span="canViewCost && orderData.costFilled ? 12 : 24">
             <el-descriptions :column="2" border title="销售信息">
               <el-descriptions-item label="商品总数量">{{ orderData.totalQuantity }}</el-descriptions-item>
               <el-descriptions-item label="商品总金额">
@@ -88,7 +88,8 @@
               </el-descriptions-item>
             </el-descriptions>
           </el-col>
-          <el-col v-if="orderData.costFilled" :span="12">
+          <!-- 成本利润汇总（仅管理员可见） -->
+          <el-col v-if="canViewCost && orderData.costFilled" :span="12">
             <el-descriptions :column="2" border title="成本利润">
               <el-descriptions-item label="采购总成本">
                 <span class="text-blue-500 font-bold">{{ formatNumber(orderData.totalPurchaseAmount) }}</span>
@@ -122,6 +123,7 @@
 import { OrderApi, OrderVO, OrderStatus } from '@/api/erp/order'
 import { formatDate } from '@/utils/formatTime'
 import { formatNumber } from '@/utils'
+import { checkPermi } from '@/utils/permission'
 
 // 安全的日期格式化，1970年显示为'-'
 const safeFormatDate = (date: any) => {
@@ -136,6 +138,11 @@ defineOptions({ name: 'OrderDetail' })
 const dialogVisible = ref(false)
 const loading = ref(false)
 const orderData = ref<OrderVO>({} as OrderVO)
+
+/** 检查是否有权限查看成本信息 */
+const canViewCost = computed(() => {
+  return checkPermi(['erp:order:fill-cost'])
+})
 
 /** 获取状态类型 */
 const getStatusType = (status: number | undefined) => {

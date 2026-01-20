@@ -3,7 +3,7 @@
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
-          <span class="text-lg font-bold">销售开单</span>
+          <span class="text-lg font-bold">{{ isUpdate ? '编辑订单' : '销售开单' }}</span>
         </div>
       </template>
 
@@ -58,19 +58,16 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="交货日期" prop="deliveryDate">
-              <el-date-picker
-                v-model="formData.deliveryDate"
-                type="date"
-                placeholder="选择日期"
-                class="!w-full"
-                value-format="YYYY-MM-DD"
-              />
+            <el-form-item label="收货地址" prop="address">
+              <el-input v-model="formData.address" placeholder="请输入收货地址" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="收货地址" prop="address">
-              <el-input v-model="formData.address" placeholder="请输入收货地址" />
+            <el-form-item label="付款状态" prop="paymentStatus">
+              <el-radio-group v-model="formData.paymentStatus">
+                <el-radio :value="0">未付款</el-radio>
+                <el-radio :value="1">已付款</el-radio>
+              </el-radio-group>
             </el-form-item>
           </el-col>
         </el-row>
@@ -80,46 +77,56 @@
         <!-- 商品列表 -->
         <el-table :data="formData.items" border style="width: 100%">
           <el-table-column label="序号" type="index" width="60" align="center" />
-          <el-table-column label="商品名称" prop="productName" min-width="200">
+          <el-table-column label="商品名称" prop="productName" width="200">
             <template #default="{ row }">
               <el-input v-model="row.productName" placeholder="请输入商品名称" />
             </template>
           </el-table-column>
-          <el-table-column label="规格" prop="spec" width="120">
+          <el-table-column label="规格" prop="spec" min-width="150">
             <template #default="{ row }">
-              <el-input v-model="row.spec" placeholder="规格" />
+              <el-input v-model="row.spec" placeholder="" />
             </template>
           </el-table-column>
-          <el-table-column label="单位" prop="unit" width="80">
+          <el-table-column label="单位" prop="saleUnit" width="150">
             <template #default="{ row }">
-              <el-input v-model="row.unit" placeholder="单位" />
+              <el-input v-model="row.saleUnit" placeholder="单位" />
             </template>
           </el-table-column>
-          <el-table-column label="数量" prop="quantity" width="120">
+          <el-table-column label="数量" prop="saleQuantity" width="150">
             <template #default="{ row }">
               <el-input-number
-                v-model="row.quantity"
+                v-model="row.saleQuantity"
                 :min="0"
-                :precision="2"
                 controls-position="right"
+                class="!w-full"
                 @change="calculateAmount(row)"
               />
             </template>
           </el-table-column>
-          <el-table-column label="单价" prop="price" width="120">
+          <el-table-column label="单价" prop="salePrice" width="150">
             <template #default="{ row }">
               <el-input-number
-                v-model="row.price"
+                v-model="row.salePrice"
                 :min="0"
-                :precision="2"
                 controls-position="right"
+                class="!w-full"
                 @change="calculateAmount(row)"
               />
             </template>
           </el-table-column>
-          <el-table-column label="金额" prop="amount" width="120" align="right">
+          <el-table-column label="金额" prop="saleAmount" width="150">
             <template #default="{ row }">
-              {{ (row.amount || 0).toFixed(2) }}
+              <el-input-number
+                v-model="row.saleAmount"
+                :min="0"
+                controls-position="right"
+                class="!w-full"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="备注" prop="saleRemark" width="200">
+            <template #default="{ row }">
+              <el-input v-model="row.saleRemark" placeholder="" />
             </template>
           </el-table-column>
           <el-table-column label="操作" width="80" align="center">
@@ -150,23 +157,9 @@
                 <span class="text-gray-500">商品总数量：</span>
                 <span class="text-lg font-bold">{{ totalQuantity }}</span>
               </div>
-              <div class="mb-10px">
-                <span class="text-gray-500">商品总金额：</span>
-                <span class="text-lg font-bold text-red-500">¥{{ totalAmount.toFixed(2) }}</span>
-              </div>
-              <div class="mb-10px">
-                <span class="text-gray-500">折扣金额：</span>
-                <el-input-number
-                  v-model="formData.discountAmount"
-                  :min="0"
-                  :precision="2"
-                  controls-position="right"
-                  size="small"
-                />
-              </div>
               <div>
-                <span class="text-gray-500">应付金额：</span>
-                <span class="text-xl font-bold text-red-500">¥{{ payableAmount.toFixed(2) }}</span>
+                <span class="text-gray-500">商品总金额：</span>
+                <span class="text-xl font-bold text-red-500">¥{{ formatPrice(totalAmount) }}</span>
               </div>
             </div>
           </el-col>
@@ -174,10 +167,10 @@
 
         <div class="mt-20px text-center">
           <el-button type="primary" size="large" @click="submitForm">
-            <Icon icon="ep:check" class="mr-5px" /> 提交订单
+            <Icon icon="ep:check" class="mr-5px" /> {{ isUpdate ? '保存修改' : '提交订单' }}
           </el-button>
-          <el-button size="large" @click="resetForm">
-            <Icon icon="ep:refresh" class="mr-5px" /> 重置
+          <el-button size="large" @click="handleCancel">
+            <Icon icon="ep:close" class="mr-5px" /> 取消
           </el-button>
         </div>
       </el-form>
@@ -187,25 +180,30 @@
 
 <script lang="ts" setup>
 import { CustomerApi } from '@/api/erp/customer'
-import * as OrderApi from '@/api/erp/order'
+import { OrderApi } from '@/api/erp/order'
 
 defineOptions({ name: 'ErpOrderCreate' })
 
 const message = useMessage()
 const router = useRouter()
+const route = useRoute()
+
+// 判断是否为编辑模式
+const isUpdate = computed(() => !!route.params.id)
+const orderId = computed(() => route.params.id)
 
 const formLoading = ref(false)
 const customerList = ref<any[]>([])
 
 const formData = ref({
+  id: undefined as number | undefined,
   customerId: undefined as number | undefined,
   contact: '',
   mobile: '',
-  address: '',
   orderDate: '',
-  deliveryDate: '',
+  paymentStatus: 0,
+  address: '',
   remark: '',
-  discountAmount: 0,
   items: [] as any[]
 })
 
@@ -218,22 +216,29 @@ const formRef = ref()
 
 /** 计算总数量 */
 const totalQuantity = computed(() => {
-  return formData.value.items.reduce((sum, item) => sum + (item.quantity || 0), 0)
+  return formData.value.items
+    .filter((item) => item.productName)
+    .reduce((sum, item) => sum + (item.saleQuantity || 0), 0)
 })
 
 /** 计算总金额 */
 const totalAmount = computed(() => {
-  return formData.value.items.reduce((sum, item) => sum + (item.amount || 0), 0)
+  return formData.value.items.reduce((sum, item) => sum + (item.saleAmount || 0), 0)
 })
 
-/** 计算应付金额 */
-const payableAmount = computed(() => {
-  return totalAmount.value - (formData.value.discountAmount || 0)
-})
+/** 限制最多3位小数（不补零） */
+const roundToThreeDecimals = (value: number | undefined): number | undefined => {
+  if (value === undefined || value === null) return value
+  return Math.round(value * 1000) / 1000
+}
 
 /** 计算行金额 */
 const calculateAmount = (row: any) => {
-  row.amount = (row.quantity || 0) * (row.price || 0)
+  // 限制数量最多3位小数
+  row.saleQuantity = roundToThreeDecimals(row.saleQuantity)
+  if (row.saleQuantity && row.salePrice) {
+    row.saleAmount = parseFloat((row.saleQuantity * row.salePrice).toFixed(2))
+  }
 }
 
 /** 添加商品行 */
@@ -241,10 +246,11 @@ const addItem = () => {
   formData.value.items.push({
     productName: '',
     spec: '',
-    unit: '个',
-    quantity: 1,
-    price: 0,
-    amount: 0
+    saleUnit: '',
+    saleQuantity: undefined,
+    salePrice: undefined,
+    saleAmount: undefined,
+    saleRemark: ''
   })
 }
 
@@ -272,6 +278,19 @@ const submitForm = async () => {
     return
   }
 
+  // 验证商品数据
+  for (let i = 0; i < formData.value.items.length; i++) {
+    const item = formData.value.items[i]
+    if (!item.saleAmount || item.saleAmount <= 0) {
+      message.warning(`第${i + 1}行金额必须大于0`)
+      return
+    }
+    if (item.salePrice !== undefined && item.salePrice < 0) {
+      message.warning(`第${i + 1}行商品单价不能为负数`)
+      return
+    }
+  }
+
   formLoading.value = true
   try {
     const data = {
@@ -279,42 +298,91 @@ const submitForm = async () => {
       orderType: 1, // 销售订单
       totalQuantity: totalQuantity.value,
       totalAmount: totalAmount.value,
-      payableAmount: payableAmount.value
+      payableAmount: totalAmount.value,
+      paidAmount: formData.value.paymentStatus === 1 ? totalAmount.value : 0,
+      orderDate:
+        formData.value.orderDate && formData.value.orderDate.length > 0
+          ? formData.value.orderDate + ' 00:00:00'
+          : new Date().toISOString().split('T')[0] + ' 00:00:00'
     }
-    await OrderApi.createOrder(data)
-    message.success('订单创建成功')
-    // 跳转到订单列表
-    router.push('/order/list')
+
+    if (isUpdate.value) {
+      await OrderApi.updateOrder(data)
+      message.success('订单修改成功，等待审核')
+    } else {
+      await OrderApi.createOrder(data)
+      message.success('订单创建成功，等待审核')
+    }
+
+    // 跳转到订单管理页
+    router.push({
+      path: '/order/manage',
+      query: { t: Date.now() }
+    })
   } finally {
     formLoading.value = false
   }
 }
 
-/** 重置表单 */
-const resetForm = () => {
-  formData.value = {
-    customerId: undefined,
-    contact: '',
-    mobile: '',
-    address: '',
-    orderDate: '',
-    deliveryDate: '',
-    remark: '',
-    discountAmount: 0,
-    items: []
+/** 取消 */
+const handleCancel = () => {
+  router.push('/order/manage')
+}
+
+/** 格式化价格 */
+const formatPrice = (price: number) => {
+  // 如果是整数，不显示小数点；否则保留两位小数
+  return price % 1 === 0 ? price.toString() : price.toFixed(2)
+}
+
+/** 加载订单详情 */
+const loadOrderDetail = async () => {
+  if (!orderId.value) return
+
+  formLoading.value = true
+  try {
+    const data = await OrderApi.getOrder(Number(orderId.value))
+    // 根据已付金额和应付金额判断付款状态
+    const paymentStatus = (data.paidAmount || 0) >= (data.payableAmount || 0) ? 1 : 0
+
+    formData.value = {
+      id: data.id,
+      customerId: data.customerId,
+      contact: data.contact || '',
+      mobile: data.mobile || '',
+      orderDate: data.orderDate ? data.orderDate.substring(0, 10) : '',
+      paymentStatus: paymentStatus,
+      address: data.address || '',
+      remark: data.remark || '',
+      items: data.items || []
+    }
+  } finally {
+    formLoading.value = false
   }
-  formRef.value?.resetFields()
+}
+
+/** 初始化客户列表 */
+const loadCustomerList = async () => {
+  customerList.value = await CustomerApi.getCustomerSimpleList()
 }
 
 /** 初始化 */
 onMounted(async () => {
-  // 获取客户列表（启用状态）
-  customerList.value = await CustomerApi.getCustomerSimpleList()
+  await loadCustomerList()
 
-  // 默认添加一行商品
-  addItem()
+  if (isUpdate.value) {
+    // 编辑模式：加载订单详情
+    await loadOrderDetail()
+  } else {
+    // 新建模式：添加一行商品，设置默认日期
+    addItem()
+    formData.value.orderDate = new Date().toISOString().split('T')[0]
+    formData.value.deliveryDate = new Date().toISOString().split('T')[0]
+  }
+})
 
-  // 默认订单日期为今天
-  formData.value.orderDate = new Date().toISOString().split('T')[0]
+// 激活时刷新客户列表
+onActivated(async () => {
+  await loadCustomerList()
 })
 </script>

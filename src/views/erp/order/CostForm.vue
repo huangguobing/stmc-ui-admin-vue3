@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model="dialogVisible" :title="dialogTitle" width="1200px">
+  <Dialog v-model="dialogVisible" :title="dialogTitle" width="1400px">
     <el-form ref="formRef" v-loading="formLoading" label-width="100px">
       <!-- 订单基本信息 -->
       <el-card class="mb-20px" shadow="never">
@@ -13,17 +13,15 @@
           <el-descriptions-item label="订单日期">{{
             formatDate(orderData.orderDate)
           }}</el-descriptions-item>
-          <el-descriptions-item label="商品总数量">{{
-            orderData.totalQuantity
-          }}</el-descriptions-item>
+          <el-descriptions-item label="商品总数量">{{ totalQuantity }}</el-descriptions-item>
           <el-descriptions-item label="销售总金额">
-            <span class="text-red-500 font-bold">{{ formatNumber(orderData.totalAmount) }}</span>
+            <span class="text-red-500 font-bold">{{ formatNumber(totalSaleAmount) }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="折扣金额">{{
             formatNumber(orderData.discountAmount)
           }}</el-descriptions-item>
           <el-descriptions-item label="应收金额">
-            <span class="text-red-500 font-bold">{{ formatNumber(orderData.payableAmount) }}</span>
+            <span class="text-red-500 font-bold">{{ formatNumber(payableAmount) }}</span>
           </el-descriptions-item>
         </el-descriptions>
       </el-card>
@@ -31,28 +29,96 @@
       <!-- 商品明细成本填充 -->
       <el-card shadow="never">
         <template #header>
-          <span class="font-bold">商品明细 - 填充采购成本</span>
+          <div class="flex justify-between items-center">
+            <span class="font-bold"
+              >商品明细 - {{ isEditMode ? '编辑商品与成本' : '填充采购成本' }}</span
+            >
+            <el-button v-if="isEditMode" type="primary" plain size="small" @click="addItem">
+              <Icon icon="ep:plus" class="mr-5px" /> 添加商品
+            </el-button>
+          </div>
         </template>
         <el-table :data="costItems" border style="width: 100%">
-          <!-- 销售信息（只读） -->
-          <el-table-column label="商品名称" prop="productName" width="150" />
-          <el-table-column label="规格" prop="spec" width="80" />
-          <el-table-column label="销售数量" prop="saleQuantity" width="90" align="right" />
-          <el-table-column label="销售单价" prop="salePrice" width="90" align="right" />
-          <el-table-column label="销售金额" prop="saleAmount" width="100" align="right">
+          <!-- 销售信息 -->
+          <el-table-column label="商品名称" width="140">
             <template #default="{ row }">
-              <span class="text-red-500">{{ formatNumber(row.saleAmount) }}</span>
+              <el-input
+                v-if="isEditMode"
+                v-model="row.productName"
+                placeholder="商品名称"
+                size="small"
+              />
+              <span v-else>{{ row.productName }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="备注" prop="saleRemark" width="80" />
+          <el-table-column label="规格" width="80">
+            <template #default="{ row }">
+              <el-input v-if="isEditMode" v-model="row.spec" placeholder="" size="small" />
+              <span v-else>{{ row.spec }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="单位" width="70">
+            <template #default="{ row }">
+              <el-input v-if="isEditMode" v-model="row.saleUnit" placeholder="" size="small" />
+              <span v-else>{{ row.saleUnit }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="销售数量" width="100">
+            <template #default="{ row }">
+              <el-input-number
+                v-if="isEditMode"
+                v-model="row.saleQuantity"
+                :min="0"
+                controls-position="right"
+                size="small"
+                class="!w-full"
+                @change="calculateSaleAmount(row)"
+              />
+              <span v-else>{{ row.saleQuantity }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="销售单价" width="100">
+            <template #default="{ row }">
+              <el-input-number
+                v-if="isEditMode"
+                v-model="row.salePrice"
+                :min="0"
+                controls-position="right"
+                size="small"
+                class="!w-full"
+                @change="calculateSaleAmount(row)"
+              />
+              <span v-else>{{ row.salePrice }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="销售金额" width="100">
+            <template #default="{ row }">
+              <el-input-number
+                v-if="isEditMode"
+                v-model="row.saleAmount"
+                :min="0"
+                controls-position="right"
+                size="small"
+                class="!w-full"
+                @change="calculateProfit(row)"
+              />
+              <span v-else class="text-red-500">{{ formatNumber(row.saleAmount) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="销售备注" width="80">
+            <template #default="{ row }">
+              <el-input v-if="isEditMode" v-model="row.saleRemark" placeholder="" size="small" />
+              <span v-else>{{ row.saleRemark }}</span>
+            </template>
+          </el-table-column>
 
           <!-- 采购成本信息（可编辑） -->
-          <el-table-column label="进货单位" width="90">
+          <el-table-column label="进货单位" width="80">
             <template #default="{ row }">
-              <el-input v-model="row.purchaseUnit" placeholder="单位" size="small" />
+              <el-input v-model="row.purchaseUnit" placeholder="" size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="进货数量" width="120">
+          <el-table-column label="进货数量" width="100">
             <template #default="{ row }">
               <el-input-number
                 v-model="row.purchaseQuantity"
@@ -64,7 +130,7 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="采购单价" width="120">
+          <el-table-column label="采购单价" width="100">
             <template #default="{ row }">
               <el-input-number
                 v-model="row.purchasePrice"
@@ -76,7 +142,7 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="采购金额" width="120">
+          <el-table-column label="采购金额" width="100">
             <template #default="{ row }">
               <el-input-number
                 v-model="row.purchaseAmount"
@@ -88,7 +154,7 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="供应商" width="150">
+          <el-table-column label="供应商" width="140">
             <template #default="{ row }">
               <el-select
                 v-model="row.supplierId"
@@ -108,7 +174,7 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="付款日期" width="140">
+          <el-table-column label="付款日期" width="130">
             <template #default="{ row }">
               <el-date-picker
                 v-model="row.paymentDate"
@@ -121,24 +187,24 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="已付款" width="70" align="center">
+          <el-table-column label="已付" width="50" align="center">
             <template #default="{ row }">
               <el-checkbox v-model="row.isPaid" @change="handleIsPaidChange(row)" />
             </template>
           </el-table-column>
-          <el-table-column label="采购备注" width="120">
+          <el-table-column label="采购备注" width="100">
             <template #default="{ row }">
-              <el-input v-model="row.purchaseRemark" placeholder="备注" size="small" />
+              <el-input v-model="row.purchaseRemark" placeholder="" size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="毛利" width="90" align="right">
+          <el-table-column label="毛利" width="80" align="right">
             <template #default="{ row }">
               <span :class="row.grossProfit >= 0 ? 'text-green-500' : 'text-red-500'">
                 {{ formatNumber(row.grossProfit) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="税率(%)" width="100">
+          <el-table-column label="税率%" width="80">
             <template #default="{ row }">
               <el-input-number
                 v-model="row.taxRate"
@@ -151,16 +217,24 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="税额" width="80" align="right">
+          <el-table-column label="税额" width="70" align="right">
             <template #default="{ row }">
               {{ formatNumber(row.taxAmount) }}
             </template>
           </el-table-column>
-          <el-table-column label="净利" width="90" align="right">
+          <el-table-column label="净利" width="80" align="right">
             <template #default="{ row }">
               <span :class="row.netProfit >= 0 ? 'text-green-500' : 'text-red-500'">
                 {{ formatNumber(row.netProfit) }}
               </span>
+            </template>
+          </el-table-column>
+          <!-- 操作列 - 仅编辑模式显示 -->
+          <el-table-column v-if="isEditMode" label="操作" width="60" align="center" fixed="right">
+            <template #default="{ $index }">
+              <el-button type="danger" link size="small" @click="removeItem($index)"
+                >删除</el-button
+              >
             </template>
           </el-table-column>
         </el-table>
@@ -168,15 +242,23 @@
         <!-- 汇总信息 -->
         <div class="mt-20px text-right">
           <el-row :gutter="40" justify="end">
-            <el-col :span="6">
+            <el-col :span="4">
               <div class="mb-10px">
-                <span class="text-gray-500">采购总成本：</span>
+                <span class="text-gray-500">销售总额：</span>
+                <span class="text-lg font-bold text-red-500">{{
+                  formatNumber(totalSaleAmount)
+                }}</span>
+              </div>
+            </el-col>
+            <el-col :span="4">
+              <div class="mb-10px">
+                <span class="text-gray-500">采购成本：</span>
                 <span class="text-lg font-bold text-blue-500">{{
                   formatNumber(totalPurchaseAmount)
                 }}</span>
               </div>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="4">
               <div class="mb-10px">
                 <span class="text-gray-500">总毛利：</span>
                 <span
@@ -189,13 +271,13 @@
                 </span>
               </div>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="4">
               <div class="mb-10px">
                 <span class="text-gray-500">总税额：</span>
                 <span class="text-lg font-bold">{{ formatNumber(totalTaxAmount) }}</span>
               </div>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="4">
               <div class="mb-10px">
                 <span class="text-gray-500">总净利：</span>
                 <span
@@ -241,7 +323,24 @@ const supplierList = ref<any[]>([])
 
 /** 动态标题 */
 const dialogTitle = computed(() => {
-  return isEditMode.value ? '编辑订单成本' : '填充采购成本'
+  return isEditMode.value ? '编辑订单' : '填充采购成本'
+})
+
+/** 计算总销售数量 */
+const totalQuantity = computed(() => {
+  return costItems.value.reduce((sum, item) => sum + (item.saleQuantity || 0), 0)
+})
+
+/** 计算总销售金额 */
+const totalSaleAmount = computed(() => {
+  return costItems.value.reduce((sum, item) => sum + (item.saleAmount || 0), 0)
+})
+
+/** 计算应收金额 */
+const payableAmount = computed(() => {
+  const discount = orderData.value.discountAmount || 0
+  const shipping = orderData.value.shippingFee || 0
+  return totalSaleAmount.value + shipping - discount
 })
 
 /** 计算汇总 */
@@ -261,8 +360,26 @@ const totalNetProfit = computed(() => {
   return costItems.value.reduce((sum, item) => sum + (item.netProfit || 0), 0)
 })
 
+/** 限制最多3位小数（不补零） */
+const roundToThreeDecimals = (value: number | undefined): number | undefined => {
+  if (value === undefined || value === null) return value
+  return Math.round(value * 1000) / 1000
+}
+
+/** 计算销售金额（数量×单价） */
+const calculateSaleAmount = (row: any) => {
+  // 限制销售数量最多3位小数
+  row.saleQuantity = roundToThreeDecimals(row.saleQuantity)
+  if (row.saleQuantity != null && row.salePrice != null) {
+    row.saleAmount = parseFloat((row.saleQuantity * row.salePrice).toFixed(2))
+  }
+  calculateProfit(row)
+}
+
 /** 计算单行利润（从数量×单价计算采购金额） */
 const calculateProfit = (row: any) => {
+  // 限制进货数量最多3位小数
+  row.purchaseQuantity = roundToThreeDecimals(row.purchaseQuantity)
   // 只有当数量和单价都有值时才自动计算采购金额
   if (row.purchaseQuantity != null && row.purchasePrice != null) {
     row.purchaseAmount = row.purchaseQuantity * row.purchasePrice
@@ -279,6 +396,41 @@ const calculateProfitFromAmount = (row: any) => {
   row.taxAmount = ((row.purchaseAmount || 0) * (row.taxRate || 0)) / 100
   // 计算净利
   row.netProfit = (row.grossProfit || 0) - (row.taxAmount || 0)
+}
+
+/** 添加商品行 */
+const addItem = () => {
+  costItems.value.push({
+    itemId: undefined, // 新增的商品没有ID
+    productName: '',
+    spec: '',
+    saleUnit: '',
+    saleQuantity: undefined,
+    salePrice: undefined,
+    saleAmount: undefined,
+    saleRemark: '',
+    purchaseUnit: '',
+    purchaseQuantity: undefined,
+    purchasePrice: undefined,
+    purchaseAmount: undefined,  // 改为 undefined（原来是0），避免毛利显示不正确
+    purchaseRemark: '',
+    supplierId: undefined,
+    taxRate: undefined,
+    taxAmount: undefined,       // 改为 undefined（原来是0）
+    grossProfit: undefined,     // 改为 undefined（原来是0）
+    netProfit: undefined,       // 改为 undefined（原来是0）
+    paymentDate: undefined,
+    isPaid: false
+  })
+}
+
+/** 删除商品行 */
+const removeItem = (index: number) => {
+  if (costItems.value.length <= 1) {
+    message.warning('至少保留一个商品')
+    return
+  }
+  costItems.value.splice(index, 1)
 }
 
 /** 处理供应商变更 - 自动继承同供应商的付款日期和状态 */
@@ -389,28 +541,73 @@ const submitForm = async () => {
     return
   }
 
+  // 编辑模式下，验证商品数据
+  if (isEditMode.value) {
+    if (costItems.value.length === 0) {
+      message.warning('请添加商品明细')
+      return
+    }
+    for (let i = 0; i < costItems.value.length; i++) {
+      const item = costItems.value[i]
+      if (!item.productName) {
+        message.warning(`第${i + 1}行商品名称不能为空`)
+        return
+      }
+      if (!item.saleAmount || item.saleAmount <= 0) {
+        message.warning(`第${i + 1}行销售金额必须大于0`)
+        return
+      }
+    }
+  }
+
   formLoading.value = true
   try {
-    const fillData = {
-      orderId: orderData.value.id!,
-      items: costItems.value.map((item) => ({
-        itemId: item.itemId,
-        purchaseUnit: item.purchaseUnit,
-        purchaseQuantity: item.purchaseQuantity,
-        purchasePrice: item.purchasePrice,
-        purchaseAmount: item.purchaseAmount,
-        purchaseRemark: item.purchaseRemark,
-        supplierId: item.supplierId,
-        taxAmount: item.taxAmount,
-        paymentDate: item.paymentDate,
-        isPaid: item.isPaid
-      }))
-    }
-
     if (isEditMode.value) {
-      await OrderApi.editOrderCost(fillData)
-      message.success('成本编辑成功')
+      // 编辑模式：调用editOrderItems接口，传递完整的商品信息
+      const editData = {
+        id: orderData.value.id!,
+        orderType: orderData.value.orderType,
+        shippingFee: orderData.value.shippingFee,
+        discountAmount: orderData.value.discountAmount,
+        items: costItems.value.map((item) => ({
+          id: item.itemId, // 保留原ID用于更新
+          productName: item.productName,
+          spec: item.spec,
+          saleUnit: item.saleUnit,
+          saleQuantity: item.saleQuantity,
+          salePrice: item.salePrice,
+          saleAmount: item.saleAmount,
+          saleRemark: item.saleRemark,
+          purchaseUnit: item.purchaseUnit,
+          purchaseQuantity: item.purchaseQuantity,
+          purchasePrice: item.purchasePrice,
+          purchaseAmount: item.purchaseAmount,
+          purchaseRemark: item.purchaseRemark,
+          supplierId: item.supplierId,
+          taxAmount: item.taxAmount,
+          paymentDate: item.paymentDate,
+          isPaid: item.isPaid
+        }))
+      }
+      await OrderApi.editOrderItems(editData)
+      message.success('订单编辑成功')
     } else {
+      // 填充模式：调用fillOrderCost接口
+      const fillData = {
+        orderId: orderData.value.id!,
+        items: costItems.value.map((item) => ({
+          itemId: item.itemId,
+          purchaseUnit: item.purchaseUnit,
+          purchaseQuantity: item.purchaseQuantity,
+          purchasePrice: item.purchasePrice,
+          purchaseAmount: item.purchaseAmount,
+          purchaseRemark: item.purchaseRemark,
+          supplierId: item.supplierId,
+          taxAmount: item.taxAmount,
+          paymentDate: item.paymentDate,
+          isPaid: item.isPaid
+        }))
+      }
       await OrderApi.fillOrderCost(fillData)
       message.success('成本填充成功')
     }
